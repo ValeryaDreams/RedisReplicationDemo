@@ -18,7 +18,25 @@ namespace Writer
 
                         var app = builder.Build();
 
+                        app.UseSwagger();
+                        app.UseSwaggerUI();
+
+                        app.MapPost("/set", async (SetRequest req, IConnectionMultiplexer redis) =>
+                        {
+                                var db = redis.GetDatabase();
+                                await db.StringSetAsync(req.key, req.value);
+
+                                return Results.Ok(new
+                                {
+                                        Tasget = "MASTER",
+                                        req.key,
+                                        req.value
+                                });
+                        });
+
                         app.Run();
                 }
         }
+
+        record SetRequest(string key, string value);
 }
