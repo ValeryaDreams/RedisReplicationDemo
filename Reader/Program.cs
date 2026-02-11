@@ -1,34 +1,60 @@
+using StackExchange.Redis;
 
 namespace Reader
 {
-    public class Program
-    {
-        public static void Main(string[] args)
+        public class Program
         {
-            var builder = WebApplication.CreateBuilder(args);
+                public static void Main(string[] args)
+                {
+                        var builder = WebApplication.CreateBuilder(args);
+                        builder.Services.AddEndpointsApiExplorer();
+                        builder.Services.AddSwaggerGen();
 
-            // Add services to the container.
+                        builder.Services.AddSingleton<IConnectionMultiplexer>(_ =>
+                        {
+                                var conn = builder.Configuration["Redis:Replica"];
+                                return ConnectionMultiplexer.Connect(conn);
+                        });
 
-            builder.Services.AddControllers();
-            // Learn more about configuring OpenAPI at https://aka.ms/aspnet/openapi
-            builder.Services.AddOpenApi();
+                        var app = builder.Build();
 
-            var app = builder.Build();
+                        app.UseSwagger();
+                        app.UseSwaggerUI();
 
-            // Configure the HTTP request pipeline.
-            if (app.Environment.IsDevelopment())
-            {
-                app.MapOpenApi();
-            }
+                        app.MapGet("/get", async (string key, IConnectionMultiplexer conn) =>
+                        {
+                                var db = conn.GetDatabase();
+                                var value = await db.StringGetAsync(key);
 
-            app.UseHttpsRedirection();
+                                return Results.Ok(new
+                                {
+                                        Target = "REPLICA",
+                                        Key = key,
+                                        Value = value.HasValue ? value.ToString() : null
+                                });
+                        });
 
-            app.UseAuthorization();
+                        app.MapGet("/set", async (SetRequest req, IConnectionMultiplexer redis) =>
+                        {
+                                try
+                                {
+                                        var db = redis.GetDatabase();
+                                        await db.StringSetAsync(req.key, req.value);
 
+                                        return Results.Ok("ERROR");
+                                }
+                                catch (RedisException ex)
+                                {
+                                        return Results.Problem(
+                                                title: "REPLICA IS READ-ONLY",
+                                                detail: ex.Message,
+                                                statusCode: 403
+                                        );
+                                }
+                        });
 
-            app.MapControllers();
-
-            app.Run();
+                        app.Run();
+                }
         }
-    }
+        record SetRequest(string key, string value);
 }
