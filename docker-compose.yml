@@ -2,25 +2,21 @@ services:
   redis-master:
     image: redis:7
     container_name: redis-master
+    ports:
+      - "6379:6379"
+    command: ["redis-server", "--appendonly", "yes"]
 
   redis-replica:
     image: redis:7
     container_name: redis-replica
     depends_on:
       - redis-master
-
-  writer:
-    build: ./Writer
-    container_name: writer-api
     ports:
-      - "5001:8080"
-    depends_on:
-      - redis-master
-
-  reader:
-    build: ./Reader
-    container_name: reader-api
-    ports:
-      - "5002:8080"
-    depends_on:
-      - redis-replica
+      - "6380:6379"
+    command:
+      [
+        "redis-server",
+        "--replicaof", "redis-master", "6379",
+        "--replica-read-only", "yes",
+        "--appendonly", "yes"
+      ]

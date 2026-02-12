@@ -34,7 +34,7 @@ namespace Reader
                                 });
                         });
 
-                        app.MapGet("/set", async (SetRequest req, IConnectionMultiplexer redis) =>
+                        app.MapPost("/set", async (SetRequest req, IConnectionMultiplexer redis) =>
                         {
                                 try
                                 {

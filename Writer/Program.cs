@@ -13,6 +13,7 @@ namespace Writer
                         builder.Services.AddSingleton<IConnectionMultiplexer>(_ =>
                         {
                                 var conn = builder.Configuration["Redis:Master"];
+                                Console.WriteLine($"Redis conn = '{conn}'");
                                 return ConnectionMultiplexer.Connect(conn);
                         });
 
@@ -28,7 +29,7 @@ namespace Writer
 
                                 return Results.Ok(new
                                 {
-                                        Tasget = "MASTER",
+                                        Target = "MASTER",
                                         req.key,
                                         req.value
                                 });
